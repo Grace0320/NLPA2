@@ -53,6 +53,15 @@ end
 
 function [outSentence] = preprocessFrench(inSentence)
     outSentence = inSentence;
+    %two letter consonant-e
+    outSentence = regexprep(outSentence, '([cjlmnst]'')(\w+)', '$1 $2');
+    %the d' words
+    outSentence = regexprep(outSentence, '(d'')((?!(?:abord|ailleurs|accord|habitude)))', '$1 $2');
+    %qu'
+    outSentence = regexprep(outSentence, '(^|\S)(qu'')(\w+)', '$2 $3'); 
+    %puisque, lorsque
+    outSentence = regexprep(outSentence, '((puisqu'')|(lorsqu''))(on|il)', '$1 $2');
+    
 end
 
 function [cliticRegex] = loadEnglishClitics()
@@ -61,6 +70,3 @@ function [cliticRegex] = loadEnglishClitics()
     cliticRegex = strcat('(', cliticJoin, ')');    
 end
 
-function [cliticsList] = loadFrenchClitics()
-
-end

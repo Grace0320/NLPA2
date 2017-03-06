@@ -26,7 +26,7 @@ function LM = lm_train(dataDir, language, fn_LM)
 % 
 % Template (c) 2011 Frank Rudzicz
 
-global CSC401_A2_DEFNS
+global CSC401_A2_DEFNS;
 
 LM=struct();
 LM.uni = struct();
@@ -38,18 +38,44 @@ SENTENDMARK = 'SENTEND';
 DD = dir( [ dataDir, filesep, '*', language] );
 
 disp([ dataDir, filesep, '.*', language] );
+lastword = '';
 
 for iFile=1:length(DD)
 
   lines = textread([dataDir, filesep, DD(iFile).name], '%s','delimiter','\n');
 
-  for l=1:length(lines)
+  for l=1:length(lines);
 
     processedLine =  preprocess(lines{l}, language);
     words = strsplit(' ', processedLine );
     
     % TODO: THE STUDENT IMPLEMENTS THE FOLLOWING
-
+    for cell = words;
+        %uni
+        word = char(cell);
+        if isfield(LM.uni, word);
+            LM.uni.(word) = LM.uni.(word) + 1;
+        else
+            [LM.uni(:).(word)] = deal(1);
+        end
+        
+        %bi
+        if ~strcmp(lastword, '') && ~strcmp(lastword, SENTENDMARK);
+            if isfield(LM.bi, lastword);
+                if isfield(LM.bi.(lastword), word);
+                    LM.bi.(lastword).(word) = LM.bi.(lastword).(word) + 1;
+                else
+                    [LM.bi.(lastword)(:).(word)] = deal(1);
+                end
+            else
+                [LM.bi(:).(lastword)] = struct();
+                [LM.bi.(lastword)(:).(word)] = deal(1);
+            end
+        end
+        
+        lastword = word;
+        
+    end
     % TODO: THE STUDENT IMPLEMENTED THE PRECEDING
   end
 end
