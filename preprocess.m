@@ -29,8 +29,8 @@ function outSentence = preprocess( inSentence, language )
   outSentence = inSentence;
 
   % perform language-agnostic changes
-    outSentence = regexprep(outSentence, '(\w+)([.,!?;:*+=<>\"()]|[(.*-.*)])', '$1 $2');
-    outSentence = regexprep(outSentence, '([.,!?;:*+=<>\"()]|[(.*-.*)])(\w+)', '$1 $2');
+    outSentence = regexprep(outSentence, '(\w+)([.,!?;:*+=<>\(\)''"`\$\%\&\[\]/]|[(.*-.*)])', '$1 $2');
+    outSentence = regexprep(outSentence, '([.,!?;:*+=<>\"()]|[\(.*-.*\)])(\w+)', '$1 $2');
     
   switch language
    case 'e'
