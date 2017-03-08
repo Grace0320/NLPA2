@@ -76,7 +76,27 @@ function [eng, fre] = read_hansard(mydir, numSentences)
   %fre = {};
 
   % TODO: your code goes here.
-
+    eng = cell(1, numSentences);
+    fre = cell(1, numSentences);
+    DDe = dir( [ mydir, filesep, '*', 'e'] );
+    DDf = dir( [ mydir, filesep, '*', 'f'] );
+    sentencesRead = 0;
+    for iFile=1:length(DDe)
+        if sentencesRead >= numSentences 
+            break;
+        end
+        linesE = textread([mydir, filesep, DDe(iFile).name], '%s','delimiter','\n');
+        linesF = textread([mydir, filesep, DDf(iFile).name], '%s','delimiter','\n');
+        numSentsForThisFile = min(numSentences - sentencesRead, length(linesE));
+        
+        for l=1:numSentsForThisFile
+            eng{l} = strsplit(' ', preprocess(linesE{l}, 'e'));
+            fre{l} = strsplit(' ', preprocess(linesF{l}, 'f'));
+        end
+        sentencesRead = sentencesRead + numSentsForThisFile;
+    end
+    eng = eng(~cellfun('isempty',eng));
+    fre = fre(~cellfun('isempty',fre));
 end
 
 
@@ -85,10 +105,45 @@ function AM = initialize(eng, fre)
 % Initialize alignment model uniformly.
 % Only set non-zero probabilities where word pairs appear in corresponding sentences.
 %
-    AM = {}; % AM.(english_word).(foreign_word)
-
+    AM = struct(); % AM.(english_word).(foreign_word)
+    [AM(:).('SENTSTART')] = struct('SENTSTART', 1);
+    [AM(:).('SENTEND')] = struct('SENTEND', 1);
     % TODO: your code goes here
-
+    numSents = length(eng);
+    for i = 1:numSents
+        numEWords = length(eng{i});
+        for j = 1:numEWords
+            eWord = char(eng{i}(j));
+            if strcmp(eWord, 'SENTSTART') || strcmp(eWord, 'SENTEND')
+                continue;
+            end
+            if ~isfield(AM, eWord)
+                [AM(:).(eWord)] = struct();
+            end
+            
+            numFwords = length(fre{i});
+            for k = 1:numFwords
+                fword = char(fre{i}(k));
+                if strcmp(fword, 'SENTSTART') || strcmp(fword, 'SENTEND')
+                    continue;
+                end
+                if ~isfield(AM.(eWord), fre{i}(k))
+                    [AM.(eWord)(:).(fword)] = deal(1);
+                end
+            end
+        end
+    end
+    
+    fields = fieldnames(AM);
+    for i = 1:numel(fields)
+        freFields = fieldnames(AM.(fields{i}));
+        uni_prob = 1/length(freFields);
+        for j = 1:numel(freFields)
+            AM.(fields{i}).(freFields{j}) = uni_prob;
+        end
+        
+    end
+    AM
 end
 
 function t = em_step(t, eng, fre)
@@ -97,6 +152,79 @@ function t = em_step(t, eng, fre)
 %
   
   % TODO: your code goes here
+  % possible alignments = le^lf
+  % grid = numsentences x possible alignments
+  
+%   initialize P(f|e)
+% for a number of iterations:
+% set tcount(f, e) to 0 for all f, e
+% set total(e) to 0 for all e
+% for each sentence pair (F, E) in training corpus:
+%   for each unique word f in F:
+%       denom_c = 0
+    %   for each unique word e in E:
+    %       denom_c += P(f|e) * F.count(f)
+    %   for each unique word e in E:
+    %       tcount(f, e) += P(f|e) * F.count(f) * E.count(e) / denom_c
+    %       total(e) += P(f|e) * F.count(f) * E.count(e) / denom_c
+% for each e in domain(total(:)):
+%   for each f in domain(tcount(:,e)):
+%       P(f|e) = tcount(f, e) / total(e)
+
+  numSents = length(eng);
+  denom_c = 0;
+  tcount = struct();
+  totalE = struct();
+  for i = 1:numSents
+      fWords = unique(fre{i});
+      numF = length(fWords);
+      for j = 3:numF  %discount SENTSTART & STARTEND, now @beginnig
+          denom_c = 0;
+          eWords = unique(eng{i});
+          numE = length(eWords);
+          fword = char(fWords{j});
+          countF = sum(strcmp(fWords, fword),2);
+          
+          for k = 3:numE
+              denom_c = denom_c + (t.(char(eWords{k})).(fword) * countF);
+          end
+          for k = 3:numE
+              eword = char(eWords{k});
+              pfe = t.(eword).(fword);
+              countE = sum(strcmp(eWords,eword),2);
+              %tcount
+              tc = pfe * countF * countE/denom_c;
+              if isfield(tcount, fword)
+                  if isfield(tcount.(fword),eword) 
+                      tcount.(fword).(eword) = tcount.(fword).(eword) + tc;
+                  else
+                      [tcount.(fword)(:).(eword)] = deal(tc);
+                  end
+              else
+                  [tcount(:).(fword)] = struct(eword, tc);
+              end
+              
+              %total 
+              if isfield(totalE, eword)
+                  totalE.(eword) = totalE.(eword) + tc;
+              else
+                  [totalE(:).(eword)] = deal(tc);
+              end
+          end
+      end
+      
+      eFields = fieldnames(totalE);
+      for l = 1:length(eFields)
+          eword = char(eFields{l});
+          fFields = fieldnames(tcount);
+          for m = 1:length(fFields)
+             fword = char(fFields{m});
+             if isfield(tcount.(fword), eword) 
+                 t.(eword).(fword) = tcount.(fword).(eword)/totalE.(eword);
+             end
+          end
+      end
+  end 
 end
 
 

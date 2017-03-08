@@ -1,11 +1,11 @@
 English
 MLE: 14.2426
-Delta 0.1
-Delta 0.5
-Delta 0.0001
+Delta 1 15.5541
+Delta 0.5 16.3145
+Delta 0.1 18.2265
 
 French
 MLE: 13.7052
-Delta 0.1 17.8479
+Delta 1 15.3959
 Delta 0.5  16.0963
-Delta 0.0001 27.8054
+Delta 0.1 17.8479
