@@ -5,8 +5,8 @@
 %  Task 5. 
 
 % some of your definitions
-trainDir     = TODO;
-testDir      = TODO;
+trainDir     = '/u/cs401/A2_SMT/data/Hansard/Training/';
+testDir      = '/u/cs401/A2_SMT/data/Hansard/Testing/';
 fn_LME       = TODO;
 fn_LMF       = TODO;
 lm_type      = TODO;
@@ -26,7 +26,7 @@ AMFE = align_ibm1( trainDir, numSentences );
 %       You can probably reuse your previous code for this  
 
 % Decode the test sentence 'fre'
-eng = decode( fre, LME, AMFE, 'smooth', delta, vocabSize );
+eng = decode2( fre, LME, AMFE, 'smooth', delta, vocabSize );
 
 % TODO: perform some analysis
 % add BlueMix code here 

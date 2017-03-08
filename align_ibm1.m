@@ -143,7 +143,6 @@ function AM = initialize(eng, fre)
         end
         
     end
-    AM
 end
 
 function t = em_step(t, eng, fre)
@@ -176,19 +175,19 @@ function t = em_step(t, eng, fre)
   tcount = struct();
   totalE = struct();
   for i = 1:numSents
-      fWords = unique(fre{i});
+      fWords = fre{i}(cellfun(@(s)isempty(regexp(s,'SENT.*')),fre{i})); %get rid of START & END
       numF = length(fWords);
-      for j = 3:numF  %discount SENTSTART & STARTEND, now @beginnig
+      for j = 1:numF  
           denom_c = 0;
-          eWords = unique(eng{i});
+          eWords = unique(eng{i}(cellfun(@(s)isempty(regexp(s,'SENT.*')),eng{i})));
           numE = length(eWords);
           fword = char(fWords{j});
           countF = sum(strcmp(fWords, fword),2);
           
-          for k = 3:numE
+          for k = 1:numE
               denom_c = denom_c + (t.(char(eWords{k})).(fword) * countF);
           end
-          for k = 3:numE
+          for k = 1:numE
               eword = char(eWords{k});
               pfe = t.(eword).(fword);
               countE = sum(strcmp(eWords,eword),2);
