@@ -17,6 +17,7 @@ function logProb = lm_prob(sentence, LM, type, delta, vocabSize)
 % Template (c) 2011 Frank Rudzicz
 
   logProb = -Inf;
+  global CSC401_A2_DEFNS
 
   % some rudimentary parameter checking
   if (nargin < 2)
@@ -47,42 +48,58 @@ function logProb = lm_prob(sentence, LM, type, delta, vocabSize)
   words = strsplit(' ', sentence);
 
   % TODO: the student implements the following
+  
+  %get corpus size
+  N = 0;
+  uni = fieldnames(LM.uni);
+  for i = 1:length(uni)
+        N = N + LM.uni.(char(uni{i})); 
+  end
+  %take out SENTSTART since we don't use its uni count
+  SS = LM.uni.( CSC401_A2_DEFNS.SENTSTART );
+  N = N - SS;
+ 
   type_is_smooth = strcmp(type, 'smooth');
   sum = 0;
 
-  for i = 1:length(words)-1
-      w1 = char(words(i));
-      w2 = char(words(i+1));
-      if isfield(LM.uni,w1) 
-          if isfield(LM.uni, w2)
-              if isfield(LM.bi.(w1), w2)
-                sum = sum + log2(LM.bi.(w1).(w2)/LM.uni.(w1));
-              else
-                  if type_is_smooth
-                    sum = sum + log2(delta);
-                  else
-                      sum = -Inf;
-                      break;
-                  end
-              end
-          else
-              if type_is_smooth
-                sum = sum + log2(delta);
-              else
-                  sum = -Inf;
-                  break;
-              end
-          end
-      else
-          if type_is_smooth
-              sum = sum + log2(delta);
-          else
-              sum = -Inf;
-              break;
-          end
+  %calc probability.
+  %for each word in sentence
+  for i = 2:length(words) %skip sentstart
+      w_i = char(words(i));
+      w_imin1 = char(words(i-1));
+      
+      if type_is_smooth
+         biCount = 0;
+         uniCount = 0;
+         if isfield(LM.uni, w_i) %check for unigram
+            uniCount =  LM.uni.(w_i);
+         end
+         if isfield(LM.bi, w_imin1) %check for bigram
+            if isfield(LM.bi.(w_imin1), w_i)
+                biCount = LM.bi.(w_imin1).(w_i);
+            end
+         end
+         sum = sum + log2((biCount + delta)*(N + (delta*vocabSize))/((uniCount + delta*vocabSize)*(uniCount + delta)));
+      else %MLE
+        %(bigramcount/unicount)/(unicount/corpus size) simplifies to bigram_count*N/unicount^2  
+        if isfield(LM.uni, w_i)
+            if isfield(LM.bi, w_imin1)
+                if isfield(LM.bi.(w_imin1), w_i)       
+                    sum = sum + log2(LM.bi.(w_imin1).(w_i)*N/(LM.uni.(w_1)^2));
+                else
+                    sum = -Inf;
+                    break;
+                end
+            else
+                sum = -Inf;
+                break;
+            end
+        else
+            sum = -Inf;
+            break;
+        end
       end
-  end  
-
+  end
   logProb = sum;
   % TODO: once upon a time there was a curmudgeonly orangutan named Jub-Jub.
 return

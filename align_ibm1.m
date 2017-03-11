@@ -95,6 +95,8 @@ function [eng, fre] = read_hansard(mydir, numSentences)
         end
         sentencesRead = sentencesRead + numSentsForThisFile;
     end
+    
+    %get rid of empty cells
     eng = eng(~cellfun('isempty',eng));
     fre = fre(~cellfun('isempty',fre));
 end
@@ -105,10 +107,11 @@ function AM = initialize(eng, fre)
 % Initialize alignment model uniformly.
 % Only set non-zero probabilities where word pairs appear in corresponding sentences.
 %
-    AM = struct(); % AM.(english_word).(foreign_word)
+    AM = struct(); 
+    
+    %force SENTSTART SENTEND probs to 1
     [AM(:).('SENTSTART')] = struct('SENTSTART', 1);
     [AM(:).('SENTEND')] = struct('SENTEND', 1);
-    % TODO: your code goes here
     numSents = length(eng);
     for i = 1:numSents
         numEWords = length(eng{i});
@@ -134,6 +137,7 @@ function AM = initialize(eng, fre)
         end
     end
     
+    %init uniform probabilities
     fields = fieldnames(AM);
     for i = 1:numel(fields)
         freFields = fieldnames(AM.(fields{i}));
@@ -172,58 +176,74 @@ function t = em_step(t, eng, fre)
 
   numSents = length(eng);
   denom_c = 0;
-  tcount = struct();
+  tcount = init_tcount(t);
   totalE = struct();
+  
+  %for each sentence pair
   for i = 1:numSents
       fWords = fre{i}(cellfun(@(s)isempty(regexp(s,'SENT.*')),fre{i})); %get rid of START & END
       numF = length(fWords);
+      
+      %for each french word
       for j = 1:numF  
           denom_c = 0;
-          eWords = unique(eng{i}(cellfun(@(s)isempty(regexp(s,'SENT.*')),eng{i})));
+          eWords = unique(eng{i}(cellfun(@(s)isempty(regexp(s,'SENT.*')),eng{i})));%get rid of START & END
           numE = length(eWords);
           fword = char(fWords{j});
           countF = sum(strcmp(fWords, fword),2);
           
+          %for each english word calc denominator
           for k = 1:numE
               denom_c = denom_c + (t.(char(eWords{k})).(fword) * countF);
           end
+          
+          %for each english word update tcounts and total counts
           for k = 1:numE
               eword = char(eWords{k});
               pfe = t.(eword).(fword);
               countE = sum(strcmp(eWords,eword),2);
               %tcount
               tc = pfe * countF * countE/denom_c;
-              if isfield(tcount, fword)
-                  if isfield(tcount.(fword),eword) 
-                      tcount.(fword).(eword) = tcount.(fword).(eword) + tc;
-                  else
-                      [tcount.(fword)(:).(eword)] = deal(tc);
-                  end
-              else
-                  [tcount(:).(fword)] = struct(eword, tc);
+              if isfield(tcount.(eword), fword)
+                tcount.(eword).(fword) = tcount.(eword).(fword) + tc;
               end
-              
               %total 
               if isfield(totalE, eword)
                   totalE.(eword) = totalE.(eword) + tc;
-              else
+             else
                   [totalE(:).(eword)] = deal(tc);
               end
           end
       end
-      
-      eFields = fieldnames(totalE);
-      for l = 1:length(eFields)
-          eword = char(eFields{l});
-          fFields = fieldnames(tcount);
-          for m = 1:length(fFields)
-             fword = char(fFields{m});
-             if isfield(tcount.(fword), eword) 
-                 t.(eword).(fword) = tcount.(fword).(eword)/totalE.(eword);
-             end
-          end
+  end
+  
+  %update model
+  eFields = fieldnames(totalE);
+  for l = 1:length(eFields)
+      eword = char(eFields{l});
+      fFields = fieldnames(tcount.(eword));
+      for m = 1:length(fFields)
+         fword = char(fFields{m});
+         if ~strcmp(fword, 'SENTSTART') && ~strcmp(fword, 'SENTEND')
+            t.(eword).(fword) = tcount.(eword).(fword)/totalE.(eword);
+         end
+
       end
-  end 
+  end
 end
 
+function t = init_tcount(AM)
+    %take all same fields of AM and init to zero in new struct
+    t = struct(AM);
+    eFields = fieldnames(t);
+    lenEFields = length(eFields);
+    for i = 1:lenEFields
+        eword = char(eFields{i});
+        fFields = fieldnames(t.(eword));
+        lenFFields = length(fFields);
+        for j = 1:lenFFields
+           t.(eword).(char(fFields{j})) = 0; 
+        end
+    end
+end
 

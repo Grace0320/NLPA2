@@ -1,11 +1,22 @@
-English
+English Perplexity
 MLE: 14.2426
-Delta 1 15.5541
-Delta 0.5 16.3145
-Delta 0.1 18.2265
+Delta=1: 15.5541
+Delta=0.5: 16.3145
+Delta=0.1: 18.2265
 
-French
+French Perplexity
 MLE: 13.7052
-Delta 1 15.3959
-Delta 0.5  16.0963
-Delta 0.1 17.8479
+Delta=1: 15.3959
+Delta=0.5:  16.0963
+Delta=0.1: 17.8479
+
+In summary: 
+MLE gives the lowest perplexity, and with smoothing, the lower the delta 
+the higher the perplexity. The English corpus is larger, so has a larger 
+perplexity with all smoothing types. 
+
+MLE gives the lowest perplexity because of the zero probabilities that are 
+built into it. These zero cells very effectively limit the branching factor 
+of the model. Delta smoothing eliminates those zeroes, and smaller deltas 
+ensure that little of the probability mass is spread over unseen words to 
+give a more realistic distribution to the vocabulary.
